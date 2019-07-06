@@ -17,7 +17,7 @@ from src.model import check_model_params, build_model
 from src.trainer import SingleTrainer, EncDecTrainer
 from src.evaluation.evaluator import SingleEvaluator, EncDecEvaluator
 
-import apex
+# import apex
 from src.fp16 import network_to_half
 
 
