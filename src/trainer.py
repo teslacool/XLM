@@ -453,17 +453,26 @@ class Trainer(object):
         data = torch.load(checkpoint_path, map_location=lambda storage, loc: storage.cuda(self.params.local_rank))
 
         # reload model parameters and optimizers
-        for name in self.MODEL_NAMES:
-            getattr(self, name).load_state_dict(data[name])
-            # getattr(self, name).load_state_dict({k[len('module.'):]: v for k, v in data[name].items()})
-            self.optimizers[name].load_state_dict(data[name + '_optimizer'])
+        if not any(['optimizer' in k for k in data.keys()]):
+            # only reload model parameters
+            for name in self.MODEL_NAMES:
+                if self.params.multi_gpu:
+                    getattr(self, name).module.load_state_dict(data[name], strict=True)
+                else:
+                    getattr(self, name).load_state_dict(data[name], strict=True)
+            logger.warning('only reload model parameters')
+        else:
+            for name in self.MODEL_NAMES:
+                getattr(self, name).load_state_dict(data[name])
+                # getattr(self, name).load_state_dict({k[len('module.'):]: v for k, v in data[name].items()})
+                self.optimizers[name].load_state_dict(data[name + '_optimizer'])
 
-        # reload main metrics
-        self.epoch = data['epoch'] + 1
-        self.n_total_iter = data['n_total_iter']
-        self.best_metrics = data['best_metrics']
-        self.best_stopping_criterion = data['best_stopping_criterion']
-        logger.warning('Checkpoint reloaded. Resuming at epoch %i ...' % self.epoch)
+            # reload main metrics
+            self.epoch = data['epoch'] + 1
+            self.n_total_iter = data['n_total_iter']
+            self.best_metrics = data['best_metrics']
+            self.best_stopping_criterion = data['best_stopping_criterion']
+            logger.warning('Checkpoint reloaded. Resuming at epoch %i ...' % self.epoch)
 
     def save_periodic(self):
         """
